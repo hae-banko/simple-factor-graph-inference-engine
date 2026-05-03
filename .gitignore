@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Pytest
+.pytest_cache/
+.pytest_
+.ruff/
+.ruff_cache/
+/docs
+CLAUDE.md
+*.egg-info
+
+# Agentic tooling (do not push)
+.CLAUDE/
+my_prompts/
+.gitmodules
