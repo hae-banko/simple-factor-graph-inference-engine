@@ -1,7 +1,12 @@
 # Bayesian Engine
 
-A general-purpose Bayesian inference engine that computes `P(target | evidence)`
-over factor graphs. One dependency (`numpy`). Pure Python 3.11+.
+A general-purpose Bayesian inference engine that computes `P(target | evidence)` over
+factor graphs. Pure Python 3.11+, one dependency (`numpy`).
+
+**What's here:** the inference core (`Model`, `Variable`, `Factor`, operators), a
+production policy layer (`BayesianPolicy`), and a full production stack of six modules
+(`SchedulerDB`, `ModelRegistry`, `DecisionLogger`, `EvidenceRecorder`,
+`StreamingEngine`, `BayesianScheduler`) for autonomous agent use.
 
 ## Install
 
@@ -9,7 +14,7 @@ over factor graphs. One dependency (`numpy`). Pure Python 3.11+.
 pip install -e .
 ```
 
-## Quick start
+## Quick start — core inference
 
 ```python
 from bayesian_engine import Model, Variable, Factor
@@ -32,25 +37,76 @@ model.add_factor(Factor(
 result = model.query("rain", evidence={"cloudy": "yes"})
 print(result["rain"]["value"])        # 'yes'
 print(result["rain"]["distribution"])  # [{'value': 'yes', 'probability': 0.8}, ...]
-
-# Save / load
-from bayesian_engine.io import export_model, import_model
-export_model(model, "weather.json")
-model2 = import_model("weather.json")
 ```
+
+## Quick start — production (BayesianScheduler)
+
+For the copresence use case (when should Reva surface herself?), use the
+high-level scheduler which handles belief tracking, audit logging, and outcome
+recording in one call:
+
+```python
+from bayesian_engine.production import BayesianScheduler
+
+scheduler = BayesianScheduler(model_name="copresence")
+
+# Inference with full audit trail
+decision = scheduler.infer(
+    target="action_class",
+    evidence={
+        "day_type": "weekday",
+        "hour_block": "morning",
+        "user_presence": "active_recently",
+        "user_load": "free",
+        "agent_need": "gentle_checkin",
+    },
+    session_id="hermes-session-abc",
+    cron_job_id="copresence-cron-001",
+)
+# decision.action      → e.g. "CHECK_IN"
+# decision.reason      → e.g. "argmax_above_threshold"
+# decision.confidence  → e.g. 0.72
+
+# Record what actually happened → updates future beliefs
+scheduler.record_outcome(
+    task_id="task-123",
+    observed_action="CHECK_IN",
+    outcome="positive",   # "positive" | "negative" | "neutral"
+    observed_at="2026-05-07T18:00:00Z",
+)
+
+# Review past decisions
+recent = scheduler.list_decisions(limit=10)
+```
+
+State lives in `~/.hermes/bayesian_scheduler/` (auto-created):
+- `scheduler.db` — SQLite with full decision + outcome history
+- `scheduler.streaming` — live belief state (particle filter, persisted)
+- `scheduler.decisions` — JSONL audit log
+- `scheduler.evidence` — outcome → evidence shaping
 
 ## Concepts
 
+### Core
 - **Variable** — Named node with a domain (discrete or continuous) and an
   optional current value.
 - **Factor** — Weight function mapping N parent variables → 1 child variable
   output. Entries in the factor graph.
-- **Model** — Named container owning variables and factors. Multi-model
-  isolation: factors cannot cross model boundaries.
+- **Model** — Named container owning variables and factors.
 - **Inference** — `model.query(target, evidence)` runs variable elimination
   (exact) for acyclic graphs, or rejection sampling (approximate) for cyclic
-  graphs. Returns a normalized probability distribution over the target
-  variable's domain.
+  graphs.
+
+### Production
+- **StreamingEngine** — online Bayesian updating via particle filter
+  (conjugate Dirichlet updates for CPT factors, SIR resampling for latent vars).
+  Belief state is persisted across sessions.
+- **SchedulerDB** — append-only SQLite store for every decision and outcome.
+- **DecisionLogger** — dual-write to SQLite + JSONL; silent on failure.
+- **EvidenceRecorder** — shapes observed outcomes into evidence dicts for
+  `infer()` calls.
+- **ModelRegistry** — tracks registered models and their file paths.
+- **BayesianScheduler** — thin composition of all the above. Single entry point.
 
 ## Operators
 
@@ -65,28 +121,14 @@ model2 = import_model("weather.json")
 | `sum()` | Σ inputs | Additive evidence |
 | `max()` | max(inputs) | Winner-take-all |
 
-All operators are factory functions that return callable closures. Register
-your own by providing any `Callable[..., float]`.
-
-## Continuous variables
-
-```python
-model.add_variable(Variable("temperature", domain=("continuous", 0, 100)))
-model.add_factor(Factor(
-    inputs=["temperature"],
-    output="alert",
-    weight_function=threshold(75),
-))
-```
-
-Continuous variables are discretized internally (default 20 bins, configurable).
-
 ## Design constraints
 
 - **Stateless core** — the inference engine is a pure function of
   `(variables, factors, target, evidence)`.
 - **Deterministic** — same inputs always produce the same output. Rejection
   sampling uses a fixed seed.
+- **Streaming state** — belief tracking in `StreamingEngine` IS stateful
+  (particle filter), but the core inference engine is stateless.
 - **Target graph size** — ≤ 50 variables, ≤ 10 factors per variable for exact
   inference.
 
@@ -94,14 +136,16 @@ Continuous variables are discretized internally (default 20 bins, configurable).
 
 ```bash
 pip install -e ".[dev]"
-pytest           # 62 tests
-ruff check .     # lint
+/home/haeba/miniconda3/bin/python3 -m pytest tests/ -q   # 202 tests, all passing
+ruff check .
 ```
 
-## Production policy wrapper
+> **Python interpreter:** always use `/home/haeba/miniconda3/bin/python3`.
+> System Python (`/usr/bin/python3`) may not have `bayesian_engine` on `sys.path`.
 
-For safe autonomous agent use, load models through the policy layer which
-fails closed to silence on any error:
+## Production policy wrapper (lower-level)
+
+For direct model loading without the full scheduler stack:
 
 ```python
 from bayesian_engine.policy import BayesianPolicy
@@ -116,11 +160,9 @@ decision = policy.decide(
 #                confidence=0.10, trace={...})
 ```
 
-The policy wrapper guarantees:
-- Invalid/missing models → fallback to safe default
-- Low-confidence actions → suppressed
-- Every decision → structured JSON-serializable trace
-- Deterministic argmax-with-threshold selection (no random sampling)
+The policy wrapper guarantees: invalid/missing models → safe fallback, low
+confidence → suppressed, every decision → structured trace, deterministic
+argmax-with-threshold selection.
 
 ## API overview
 
@@ -137,15 +179,34 @@ export_model(model, path)             # Serialize to JSON file
 import_model(path)                    # Deserialize from JSON file
 model_to_dict(model)                  # Serialize to dict
 model_from_dict(data)                 # Deserialize from dict
-model_to_json(model)                  # Serialize to JSON string
-model_from_json(text)                 # Deserialize from JSON string
 
 # Policy
 BayesianPolicy.load(path)             # Load model with validation
-policy.decide(target, evidence)       # Safe production decision
+policy.decide(target, evidence)       # Safe production decision (fresh VE)
 PolicyDecision(action, reason, confidence, trace)
-select_action(distribution, config)   # Deterministic selector
+select_action(distribution, threshold)  # Deterministic selector
+
+# Production stack
+BayesianScheduler(model_name, ...)     # Full production entry point
+scheduler.infer(target, evidence, ...)  # Decision + belief update + audit
+scheduler.record_outcome(...)          # Outcome → future evidence
+scheduler.list_decisions(...)          # Query decision history
+scheduler.get_beliefs(variable)        # Inspect current belief state
+scheduler.reset()                      # Clear streaming beliefs
+scheduler.list_models()               # List registered models
 ```
+
+## Models
+
+| Model | File | Purpose |
+|-------|------|---------|
+| Copresence (P0) | `models/copresence.json` | When should Reva surface herself? |
+
+The copresence model has five input variables (day_type, hour_block,
+user_presence, user_load, agent_need), two latent variables
+(contact_window, action_class), and five action outputs (CHECK_IN,
+BRIEF_ACK, FULL_RESPONSE, DEFER, SELF_MAINTAIN). 22 acceptance tests in
+`tests/test_copresence_model.py`.
 
 ## License
 
