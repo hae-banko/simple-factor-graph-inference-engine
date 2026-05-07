@@ -10,8 +10,32 @@ production policy layer (`BayesianPolicy`), and a full production stack of six m
 
 ## Install
 
+**One-time setup** (any machine):
+
 ```bash
+# Clone the repo (first time only)
+git clone git@github.com:hae-banko/bayesian-scheduler.git
+cd bayesian-scheduler
+
+# Install in editable mode — edits to source take effect immediately
 pip install -e .
+```
+
+> **Editable mode (`-e`)** means the package is linked to your source tree.
+> You can edit code and it works immediately — no `pip install` after every change.
+
+**Alternatively, install directly from git (no clone):**
+
+```bash
+pip install git+ssh://git@github.com/hae-banko/bayesian-scheduler.git
+```
+
+> This installs a snapshot. For active development, use the editable clone above.
+
+**Hermes Agent** — if the repo is already at `/mnt/h/fun/bayesian-engine`, just run:
+
+```bash
+pip install -e /mnt/h/fun/bayesian-engine
 ```
 
 ## Quick start — core inference
