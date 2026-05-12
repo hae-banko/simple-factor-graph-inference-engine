@@ -176,11 +176,13 @@ class StreamingEngine:
         model_path: str,
         n_particles: int = 200,
         seed: int = 42,
+        learning_rate: float = 1.0,
     ) -> None:
         self._model_path = model_path
         self._model_name = Path(model_path).stem
         self._n_particles = n_particles
         self._seed = seed
+        self._learning_rate = learning_rate
         self._rng = np.random.default_rng(seed)
 
         # Load model
@@ -538,4 +540,4 @@ class StreamingEngine:
                 dirich[parent_key] = {v: 1.0 for v in output_vals}
 
             if map_val in dirich[parent_key]:
-                dirich[parent_key][map_val] += 1.0
+                dirich[parent_key][map_val] += self._learning_rate

@@ -71,6 +71,7 @@ class BayesianScheduler:
         threshold: float = DEFAULT_THRESHOLD,
         n_particles: int = DEFAULT_N_PARTICLES,
         seed: int = DEFAULT_SEED,
+        learning_rate: float = 1.0,
     ) -> None:
         """
         Parameters
@@ -87,11 +88,16 @@ class BayesianScheduler:
             Number of particles for the streaming engine.
         seed : int, default 42
             RNG seed for deterministic particle resampling.
+        learning_rate : float, default 1.0
+            Dirichlet learning rate. Values < 1.0 slow adaptation, preventing
+            the belief state from collapsing to a deterministic posterior.
+            Recommended for copresence: 0.1.
         """
         self.model_name = model_name
         self._threshold = threshold
         self._n_particles = n_particles
         self._seed = seed
+        self._learning_rate = learning_rate
         self._state_dir = state_dir or get_state_dir()
 
         # Core persistence — SchedulerDB takes db_path, not state_dir
@@ -112,6 +118,7 @@ class BayesianScheduler:
             model_path=model_path,
             n_particles=n_particles,
             seed=seed,
+            learning_rate=learning_rate,
         )
 
         # Audit trail — DecisionLogger needs (db, log_file_path)
