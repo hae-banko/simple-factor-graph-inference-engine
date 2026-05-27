@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -14,7 +15,8 @@ from bayesian_engine.production.scheduler_api import (
     DEFAULT_THRESHOLD,
 )
 
-COPRESENCE_MODEL_PATH = "/mnt/h/fun/bayesian-engine/models/copresence.json"
+_models = Path(__file__).parent.parent / "models"
+COPRESENCE_MODEL_PATH = str(_models / "copresence.json")
 
 
 # ------------------------------------------------------------------

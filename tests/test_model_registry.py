@@ -9,6 +9,8 @@ import pytest
 
 from bayesian_engine.production.model_registry import ModelRegistry
 
+_models = Path(__file__).parent.parent / "models"
+
 
 @pytest.fixture
 def registry(tmp_path: Path) -> ModelRegistry:
@@ -19,7 +21,7 @@ def registry(tmp_path: Path) -> ModelRegistry:
 @pytest.fixture
 def model_file(registry: ModelRegistry, tmp_path: Path) -> Path:
     """Copy the copresence.json model into the registry's models dir and return its path."""
-    src = Path("/mnt/h/fun/bayesian-engine/models/copresence.json")
+    src = _models / "copresence.json"
     models_dir = registry.get_state_dir() / "models"
     dest = models_dir / "copresence.json"
     shutil.copy(src, dest)
@@ -89,7 +91,7 @@ class TestDeleteModel:
         model1_path = tmp_path / "model1.json"
         model2_path = tmp_path / "model2.json"
 
-        src = Path("/mnt/h/fun/bayesian-engine/models/copresence.json")
+        src = _models / "copresence.json"
         shutil.copy(src, model1_path)
         shutil.copy(src, model2_path)
 
