@@ -33,5 +33,11 @@ my_prompts/
 .gitmodules
 .instruction-layer/
 
+# Local test helpers
+_check_syntax2.py
+_run_tests.py
+_smoke_test.py
+test_exact_enumeration.py
+
 # Internal design docs (private — stored in Obsidian vault instead)
 docs/
