@@ -31,6 +31,7 @@ CLAUDE.md
 .CLAUDE/
 my_prompts/
 .gitmodules
+.instruction-layer/
 
 # Internal design docs (private — stored in Obsidian vault instead)
 docs/
