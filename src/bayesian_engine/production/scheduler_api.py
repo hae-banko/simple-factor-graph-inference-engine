@@ -71,7 +71,8 @@ class BayesianScheduler:
         threshold: float = DEFAULT_THRESHOLD,
         n_particles: int = DEFAULT_N_PARTICLES,
         seed: int = DEFAULT_SEED,
-        learning_rate: float = 1.0,
+        learning_rate: float = 0.1,
+        use_exact: bool = False,
     ) -> None:
         """
         Parameters
@@ -88,16 +89,20 @@ class BayesianScheduler:
             Number of particles for the streaming engine.
         seed : int, default 42
             RNG seed for deterministic particle resampling.
-        learning_rate : float, default 1.0
+        learning_rate : float, default 0.1
             Dirichlet learning rate. Values < 1.0 slow adaptation, preventing
             the belief state from collapsing to a deterministic posterior.
             Recommended for copresence: 0.1.
+        use_exact : bool, default False
+            If True, use exact Dirichlet-CPT enumeration instead of particle
+            filtering. Recommended for copresence: True.
         """
         self.model_name = model_name
         self._threshold = threshold
         self._n_particles = n_particles
         self._seed = seed
         self._learning_rate = learning_rate
+        self._use_exact = use_exact
         self._state_dir = state_dir or get_state_dir()
 
         # Core persistence — SchedulerDB takes db_path, not state_dir
@@ -119,6 +124,7 @@ class BayesianScheduler:
             n_particles=n_particles,
             seed=seed,
             learning_rate=learning_rate,
+            use_exact=use_exact,
         )
 
         # Audit trail — DecisionLogger needs (db, log_file_path)
@@ -247,7 +253,7 @@ class BayesianScheduler:
         int
             The outcome database row ID.
         """
-        return self.evidence.record_outcome(
+        outcome_id = self.evidence.record_outcome(
             inferred_at=datetime.now(timezone.utc).isoformat(),
             observed_at=datetime.now(timezone.utc).isoformat(),
             task_id=task_id,
@@ -257,6 +263,11 @@ class BayesianScheduler:
             error=error,
             context=context,
         )
+
+        # Trigger belief update from observed outcome
+        self.streaming.update_from_outcome(action=action, success=success)
+
+        return outcome_id
 
     def list_decisions(
         self,
