@@ -2,20 +2,13 @@
 
 from __future__ import annotations
 
-import json
 import sqlite3
 
 import pytest
 
 from bayesian_engine.production.scheduler_db import (
     SchedulerDB,
-    InferenceRecord,
-    OutcomeRecord,
-    PosteriorRecord,
-    STATE_DIR,
-    get_state_dir,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

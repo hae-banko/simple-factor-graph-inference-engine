@@ -1,4 +1,4 @@
-"""Streaming belief-state engine: hybrid Dirichlet + particle filter for online Bayesian inference."""
+"""Streaming belief-state engine: hybrid Dirichlet + particle filter for online inference."""
 
 from __future__ import annotations
 
@@ -269,7 +269,11 @@ class StreamingEngine:
                 json.dump(data, f)
             tmp.rename(path)
         except OSError as exc:
-            logger.warning("Could not persist belief state to %s (%s) — continuing without persistence.", path, exc)
+            logger.warning(
+                "Could not persist belief state to %s (%s) — continuing without persistence.",
+                path,
+                exc,
+            )
 
     # ------------------------------------------------------------------
     # Public API
@@ -299,10 +303,14 @@ class StreamingEngine:
             self._current_evidence = dict(new_evidence)
 
         # ---- Exact enumeration path (bypasses particles) ------------------------
-        if self._use_exact and target in self._model.variables and self._model.variables[target].latent:
+        use_exact_path = (
+            self._use_exact
+            and target in self._model.variables
+            and self._model.variables[target].latent
+        )
+        if use_exact_path:
             self._current_evidence = dict(new_evidence) if new_evidence else {}
             result = self._exact_query(target, new_evidence)
-            exact_map = result[target]["value"]
             # NOTE: Do NOT call _dirichlet_update here.
             # Dirichlet learning from OUTCOMES is handled exclusively by
             # update_from_outcome(), which records observed signals.
@@ -378,7 +386,6 @@ class StreamingEngine:
         for factor in self._model.factors:
             if factor.output == variable and _is_table_factor(factor):
                 fid = _factor_id(factor)
-                cpt = _extract_cpt(factor)
                 dirich = self._dirichlet_state.get(fid, {})
 
                 # Compute probabilities from pseudo-counts
@@ -432,7 +439,6 @@ class StreamingEngine:
 
         for factor in self._model.factors:
             cpt = _extract_cpt(factor) if _is_table_factor(factor) else None
-            cpt_params = factor.weight_function.__operator_params__ if _is_table_factor(factor) else {}
 
             for i, particle in enumerate(self._particles):
                 # Collect parent values from particle + evidence
@@ -845,8 +851,8 @@ class StreamingEngine:
                 if input_name in self._model.variables:
                     var = self._model.variables[input_name]
                     if var.latent:
-                        # Infer the latent parent's posterior using full exact query path
-                        # (uses CPT prior when Dirichlet is uniform, correctly resolves latent parents)
+                        # Infer latent parent posterior via exact query (uses CPT prior
+                        # when Dirichlet is uniform, correctly resolves latent parents)
                         exact_result = self._exact_query(input_name, current_evidence)
                         parent_vals.append(exact_result[input_name]["value"])
                     else:
@@ -881,7 +887,7 @@ class StreamingEngine:
     ) -> dict[str, Any]:
         """Compute exact posterior for a single parent variable (used in update_from_outcome).
 
-        Returns the posterior distribution as a dict {target: {"value": MAP, "distribution": [...]}}.
+        Returns the posterior as a dict {target: {"value": MAP, "distribution": [...]}}.
         Uses the current Dirichlet state and CPT prior.
         """
         var = self._model.variables[target]
@@ -938,3 +944,4 @@ class StreamingEngine:
         ]
 
         return {target: {"value": map_value, "distribution": distribution}}
+

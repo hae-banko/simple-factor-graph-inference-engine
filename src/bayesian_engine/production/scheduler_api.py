@@ -11,7 +11,9 @@ Hermes cron job. It composes::
 Usage::
 
     scheduler = BayesianScheduler(model_name="copresence")
-    decision = scheduler.infer("action_class", {"day_type": "weekday", "hour_block": "morning", ...})
+    decision = scheduler.infer(
+        "action_class", {"day_type": "weekday", "hour_block": "morning", ...}
+    )
     scheduler.record_outcome(task_id="...", action=decision.action, success=True)
     beliefs = scheduler.get_beliefs("contact_window")
     scheduler.reset()   # clear all belief state

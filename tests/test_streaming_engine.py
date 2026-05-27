@@ -2,27 +2,22 @@
 
 from __future__ import annotations
 
-import json
-import os
 from pathlib import Path
 
 import numpy as np
 import pytest
 
+from bayesian_engine.core.factor import Factor
+from bayesian_engine.core.variable import Variable
+from bayesian_engine.operators.table import table
 from bayesian_engine.production.streaming_engine import (
     StreamingEngine,
-    _belief_dir,
     _belief_path,
     _factor_id,
+    _init_particles_low_discrepancy,
     _is_table_factor,
     _iter_domain_combinations,
-    _init_particles_low_discrepancy,
 )
-from bayesian_engine.core.model import Model
-from bayesian_engine.core.variable import Variable
-from bayesian_engine.core.factor import Factor
-from bayesian_engine.operators.table import table
-
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -160,7 +155,7 @@ def test_beliefs_persist_across_instances(belief_file_path):
         "user_presence": "active_recently",
         "user_load": "free",
     }
-    result1 = eng1.update_and_query("contact_window", evidence)
+    eng1.update_and_query("contact_window", evidence)
 
     # Second engine loads from disk
     eng2 = StreamingEngine(COPRESENCE_MODEL_PATH, n_particles=200, seed=42)
@@ -308,3 +303,4 @@ def test_init_particles_low_discrepancy():
     v1_counts = {v: sum(1 for p in particles if p["v1"] == v) for v in ["a", "b"]}
     assert v1_counts["a"] in (4, 5, 6)
     assert v1_counts["b"] in (4, 5, 6)
+

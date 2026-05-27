@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import shutil
 from pathlib import Path
 
@@ -59,7 +58,9 @@ class TestRegisterModel:
         assert len(models) == 1
         assert models[0]["name"] == "copresence"
 
-    def test_register_duplicate_name_raises(self, registry: ModelRegistry, model_file: Path) -> None:
+    def test_register_duplicate_name_raises(
+        self, registry: ModelRegistry, model_file: Path
+    ) -> None:
         """Register same name twice raises ValueError."""
         registry.register_model(model_file, name="copresence")
 

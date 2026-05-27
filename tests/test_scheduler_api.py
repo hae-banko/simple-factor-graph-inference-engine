@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import json
-import shutil
-from pathlib import Path
 
 import pytest
 
@@ -193,15 +191,9 @@ class TestInfer:
             "user_presence": "active_recently",
             "user_load": "free",
         }
-        evidence2 = {
-            "day_type": "weekday",
-            "hour_block": "workday",
-            "user_presence": "idle",
-            "user_load": "normal",
-        }
         # Streaming update is tested independently in test_streaming_engine.py.
         # Here we just verify sequential calls work without error.
-        result1 = scheduler.infer("contact_window", evidence1)
+        scheduler.infer("contact_window", evidence1)
         result2 = scheduler.infer("contact_window", evidence1)  # same evidence, no crash
         assert result2 is not None
 

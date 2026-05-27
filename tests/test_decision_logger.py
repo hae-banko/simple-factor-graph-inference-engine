@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 
 import pytest
 
@@ -14,7 +12,6 @@ from bayesian_engine.operators import table
 from bayesian_engine.policy import BayesianPolicy, PolicyDecision
 from bayesian_engine.production.decision_logger import DecisionLogger
 from bayesian_engine.production.scheduler_db import SchedulerDB
-
 
 # -----------------------------------------------------------------------------
 # Helpers
@@ -30,8 +27,12 @@ def _make_temp_model(tmp_path):
         inputs=["day_type"],
         output="action_class",
         weight_function=table({
-            ("weekday", "CHECK_IN"): 0.3, ("weekday", "SELF_MAINTAIN"): 0.5, ("weekday", "DEFER"): 0.2,
-            ("weekend", "CHECK_IN"): 0.6, ("weekend", "SELF_MAINTAIN"): 0.3, ("weekend", "DEFER"): 0.1,
+            ("weekday", "CHECK_IN"): 0.3,
+            ("weekday", "SELF_MAINTAIN"): 0.5,
+            ("weekday", "DEFER"): 0.2,
+            ("weekend", "CHECK_IN"): 0.6,
+            ("weekend", "SELF_MAINTAIN"): 0.3,
+            ("weekend", "DEFER"): 0.1,
         }),
     ))
     path = str(tmp_path / "copresence_model.json")

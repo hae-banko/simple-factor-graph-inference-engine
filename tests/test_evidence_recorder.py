@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -307,7 +306,7 @@ class TestRecordOutcomeWithJsonContext:
             "metadata": {"region": "us-east", "tier": "production"},
         }
 
-        outcome_id = recorder.record_outcome(
+        recorder.record_outcome(
             task_id="task-10",
             action="deploy",
             inferred_at="2026-01-01T10:00:00+00:00",
