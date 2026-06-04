@@ -1,4 +1,4 @@
-# Bayesian Engine
+# Factor Graph Inference Engine
 
 A general-purpose Bayesian inference engine that computes `P(target | evidence)` over
 factor graphs. Pure Python 3.11+, one dependency (`numpy`).
